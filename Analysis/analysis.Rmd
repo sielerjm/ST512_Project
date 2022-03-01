@@ -134,33 +134,7 @@ dt.alphaPlus.all.melt <- melt_to_datatable_2(datatable1 = dt.all,
 ```
 
 
-
-
-# Plots
-
-## Does sex affect microbiome diversity?
-
-
-```{r Alpha-sex, message=FALSE, warning=FALSE, include=FALSE}
-# make tmp data var
-data <- dt.alphaPlus.all.melt
-
-# Add observation numbers to data
-data <- dplyr::mutate(data, obs_num = row_number(), .before = 1)
-
-mod.list <- lapply(methods.alpha, function(alpha){
-  lm( formula = "Alpha.Score ~ sex*HMPbodysubsite",
-       data = subset(data, Alpha.Metric == alpha))
-})
-
-
-
-
-
-```
-
-
-# Check assumptions
+# Check assumptions and remove unusual observations
 
 ```{r echo=TRUE, fig.height=5, fig.width=8}
 
