@@ -6,21 +6,7 @@
 #     - alpha-diversity functions, beta-diversity, export tables/figure, etc.
 ###########################################################################
 
-# Set Plot Settings -------------------------------------------------------
-
-## Function that automatically allocates customized RcolorBrewing pallattes
-##  based on the number of variables you're analyzing.
-#   Description: 
-#   Input: 
-#   Output: 
-
-
-
-# P-value Format ----------------------------------------------------------
-#   Description: Formats P-values for summary statistic tables
-#     * P-values below a certain threshold will appear as "<0.001"
-#   Input: 
-#   Output: 
+# P-value  -------------------------------------------------------
 
 p_val_format <- function(x){
   z <- scales::pvalue_format()(x)

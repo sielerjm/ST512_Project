@@ -24,7 +24,7 @@
 
 # Analysis ID
 analysis.ID <- paste0(
-  "ZF-DietStudy_",  # Data subsetted? If so, how? "<name>_"
+  "ST512_Proj_",  # Data subsetted? If so, how? "<name>_"
   Sys.Date()  # Date of analysis
 )
 
@@ -35,14 +35,14 @@ analysis.ID <- paste0(
 num.cores = ifelse(detectCores() > 4, round(detectCores()*.9), round(detectCores()*.5) )
 
 # - Manual
-num.cores = ifelse(detectCores() > 4, round(detectCores()*.9), round(detectCores()*.5) )
+# num.cores = ifelse(detectCores() > 4, round(detectCores()*.9), round(detectCores()*.5) )
 # num.cores = 4
 
 
 # Import Data -------------------------------------------------------------
 
 # Load Phyloseq Object
-ps.all <- readRDS(paste0(objects.path, "/phyloseq_sampData_cleaned_noOutliers_2022-02-28.rds"))
+# ps.all <- readRDS(paste0(objects.path, "/phyloseq_sampData_cleaned_noOutliers_2022-02-28.rds"))
 
 # sample_data(ps.all) <- sample.data.frame(ps.all) %>%
 #   rename(Body.Condition.Score = Body.Condition.Trad)

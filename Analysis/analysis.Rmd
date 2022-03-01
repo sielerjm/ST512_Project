@@ -1,0 +1,282 @@
+---
+title: "Zebrafish Diet and Infection Targetted Analysis"
+author: "Sunni Patton, Connor Draney, Kelly Shannon, Michael Sieler"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    number_sections: yes
+    theme: united
+    highlight: tango
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Check project file location is in correct directory
+## Path to project directory (Rproject file should be stored in "~/Code")
+proj.path <- file.path(paste0(getwd(),"/../Code"))
+
+
+# Helper Scripts
+
+## Load libraries
+source(paste0(proj.path,"/HelperScripts/libraries.R"))
+
+## Load functions
+# source(paste0(proj.path,"/HelperScripts/functions_2.R"))
+
+## Load custom plot settings
+source(paste0(proj.path,"/HelperScripts/plot_settings.R"))
+
+
+# Set important paths
+
+## Path to data files/sub-folders
+data.path <- paste0(proj.path,  # Project path
+                               "/../Data")  # Sub-directory
+
+## Path to Robjects (Renv, Rds, Rdata, etc.) saved here
+objects.path <- paste0(data.path,  # Project path
+                                  "/Clean/Robjects")  # Sub-directory
+
+## Path to Output (Figures, Tables)
+output.path <- paste0(proj.path,  # Project path
+                                 "/../Output")  # Sub-directory
+
+
+```
+
+
+# Import Data
+```{r}
+
+# Download Data
+temp_test = tempfile()
+test_url = "http://joey711.github.io/phyloseq-demo/HMPv35.RData"
+download.file(test_url, destfile = paste0(data.path, "/Raw/HMPv35.RData"))
+
+load(paste0(data.path, "/Raw/HMPv35.RData"))
+ps.all <- HMPv35
+rm(HMPv35)  # remove this obj from global env
+```
+
+## Clean sample data
+```{r}
+ps.unclean <- ps.all  # rename physeq obj
+
+df.all %>% count(RUNCENTER) %>% arrange(-n)  # Find largest number of samples of the institutions.
+
+# Find the center with largest counts for the following conditions
+sample.data.frame(ps.all) %>% 
+  count(RUNCENTER,
+        Mislabeled,
+        Contaminated, 
+        visitno) %>% 
+  arrange(-n)
+
+
+
+ps.clean <- subset_samples(ps.unclean,  # physeq object
+                              Mislabeled == F &  # Remove mislabeled
+                              Contaminated == F &  # remove contaminated
+                              visitno == 1 & # first visit, so no repeat sampling of individuals, independence
+                              RUNCENTER == "JCVI"  # Same center, independence
+                              )
+
+print(paste0("Dropped ", nrow(sample_data(ps.all)) - nrow(sample_data(ps.clean)), " samples after cleaning."))
+
+
+view(sample.data.frame(ps.clean))
+```
+
+
+
+```{r}
+ps.all <- ps.clean  # Reassign ps.all from cleaned physeq obj
+df.all <- sample.data.frame(ps.all)  # dataframe
+dt.all <- sample.data.table(ps.all)  # datatable
+
+```
+
+
+
+# Alpha-diversity
+
+```{r}
+# Which alpha indices do you want to use?
+methods.alpha <- c("Shannon", "Simpson") %>% 
+  purrr::set_names()
+
+# Calculate raw alpha scores
+dt.alphaScores.all <- alpha_base(ps.all,  # Phyloseq object
+                         methods.alpha,  # list of alpha methods
+                         "Sample")  # Column name for sample IDs
+
+# Normalize scores from 0 to 1 for easier comparison across metrics
+# dt.alphaScores.norm.all <- norm_alpha_score(dt.alphaScores.all, df.all, methods.alpha)
+
+# Create a datatable of alpha scores
+dt.alphaPlus.all <- dt.all[dt.alphaScores.all, on = "Sample"] %>% setkeyv("Sample")
+
+# Melt data table
+dt.alphaPlus.all.melt <- melt_to_datatable_2(datatable1 = dt.all, 
+                                         datatable2 = dt.alphaScores.norm.all, 
+                                         vars = methods.alpha, 
+                                         var.name = "Alpha.Metric",
+                                         samp.name = "Sample",
+                                         val.name = "Alpha.Score")
+
+```
+
+
+
+
+# Plots
+
+## Does sex affect microbiome diversity?
+
+
+```{r Alpha-sex, message=FALSE, warning=FALSE, include=FALSE}
+# make tmp data var
+data <- dt.alphaPlus.all.melt
+
+# Add observation numbers to data
+data <- dplyr::mutate(data, obs_num = row_number(), .before = 1)
+
+mod.list <- lapply(methods.alpha, function(alpha){
+  lm( formula = "Alpha.Score ~ sex*HMPbodysubsite",
+       data = subset(data, Alpha.Metric == alpha))
+})
+
+
+
+
+
+```
+
+
+# Check assumptions
+
+```{r echo=TRUE, fig.height=5, fig.width=8}
+
+
+mod.1 <- lm(Alpha.Score ~ sex*HMPbodysubsite, data =  subset(data, Alpha.Metric == "Simpson"))
+data.1.fort <- fortify(mod.1, data)
+
+# setnames(data, old=c("old_name1","old_name2"), new=c("new_name1", "new_name2"))
+setnames(data.1.fort, old=c(".hat", ".cooksd", ".stdresid"), new=c("Lev", "CooksD", "StdResid"))
+
+# Unrefinded model
+
+## Plot
+plot.1 <- qplot(obs_num, value, data = reshape::melt(data.1.fort[, c("obs_num","Lev", "CooksD", "StdResid")],
+  id.vars = "obs_num")) + 
+  geom_point(aes(color = variable)) +
+  facet_grid(variable ~ ., scale = "free_y") + 
+  labs(title = "Case-influence statistics plot 2: unrefined model") + 
+  scale_color_brewer(palette = "Dark2") + 
+  theme(legend.position = "none") + scale_x_continuous(breaks = scales::breaks_pretty(10))
+
+
+plot.1
+
+# Refined model
+
+### Statisticians use rough cutoffs of 2p/n (p is the number of unknown parameters in the model) for leverage, 1 for Cook’s Distance and above 2 or below -2 for standardized residuals. Observations falling outside these ranges warrant further attention.
+
+# Cut off value for leverage
+cutOff.lev <- (2 * length(mod.1[["coefficients"]]) / nrow(data.1.fort))
+
+
+## Remove unusual observations
+data.2.sub <- data.1.fort %>%
+  filter(Lev < cutOff.lev &  # Leverage Cut off
+         StdResid < 2 & StdResid > -2)
+
+# rem_rows.2 <- which(data.1.fort$Lev > cutOff.lev &  # Leverage Cut off
+#                       data.1.fort$StdResid < 2 & data.1.fort$StdResid  # StdResiduals cut off
+#                     )
+
+# data.2.sub <- data[-c(rem_rows.2[,1]),]
+# nrow(data) - nrow(data.2.sub)  # How many observations removed
+
+## Make model
+mod.2 <- lm(Alpha.Score ~ sex*HMPbodysubsite, data = data.2.sub)
+
+## Fortify data
+data.2.fort <- fortify(mod.2, data.2.sub)
+
+# setnames(data, old=c("old_name1","old_name2"), new=c("new_name1", "new_name2"))
+setnames(data.2.fort, old=c(".hat", ".cooksd", ".stdresid"), new=c("Lev", "CooksD", "StdResid"))
+
+
+## Plot
+plot.2 <- qplot(obs_num, value, data = reshape::melt(data.2.fort[, c("obs_num","Lev", "CooksD", "StdResid")],
+  id.vars = "obs_num")) + 
+  geom_point(aes(color = variable)) +
+  facet_grid(variable ~ ., scale = "free_y") + 
+  labs(title = "Case-influence statistics plot 2: refinded model") + 
+  scale_color_brewer(palette = "Dark2") + 
+  theme(legend.position = "none") + scale_x_continuous(breaks = scales::breaks_pretty(10))
+
+
+```
+
+### Plot unrefined and refined models
+```{r}
+
+# Combine Plots
+combPlots.1 <- marrangeGrob(list(plot.1, plot.2), nrow = 2, ncol = 1, top=NULL)
+
+combPlots.1
+
+```
+
+
+```{r}
+plot(mod.1)
+plot(mod.2)
+```
+
+
+
+```{r echo=FALSE, fig.height=5, fig.width=5}
+
+summary(mod.2)
+Anova(mod.2, type = 2)
+
+
+```
+
+
+# Plot
+
+```{r}
+
+```
+
+
+
+```{r}
+
+plot <- list()
+plot <- lapply(names(methods.alpha), function(x){
+  gen_box_plot_2(data = subset(data.2.fort, Alpha.Metric == x),
+                              "HMPbodysubsite",  # x-variable
+                              "Alpha.Score",  # y-variable
+                              # facet.var.x = "HMPbodysubsite",  # Optional
+                              # facet.var.y = "Alpha.Metric",  # Optional
+                              colors = c(pal.dark2, pal.paired, pal.set1),  # Optional
+                              title = "lm(Alpha.Score ~ HMPbodysubsite)",  # Optional
+                              # title = NULL  # Optional,
+                              y.lab = paste0("Diversity (",x,")") #,
+                              )
+}) 
+plot[2]
+```
+
