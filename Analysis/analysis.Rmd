@@ -231,7 +231,7 @@ To assess if the assumptions of linear model regression were met, we visually in
 
 ### Shannon
 
-```{r}
+```{r fig.height=4, fig.width=6}
 
 index <- "Shannon"
 plot(caseInfStats[["mod.unref"]][[index]], sub = paste0("(Unrefined: ", methods.alpha[index],")") )
@@ -242,7 +242,7 @@ plot(caseInfStats[["mod.unref"]][[index]], sub = paste0("(Unrefined: ", methods.
 
 
 
-```{r}
+```{r fig.height=4, fig.width=6}
 
 index <- "Simpson"
 plot(caseInfStats[["mod.unref"]][[index]], sub = paste0("(Unrefined: ", methods.alpha[index],")") )
@@ -253,7 +253,7 @@ plot(caseInfStats[["mod.unref"]][[index]], sub = paste0("(Unrefined: ", methods.
 
 
 
-```{r}
+```{r fig.height=4, fig.width=6}
 
 index <- "Phylogenetic"
 plot(caseInfStats[["mod.unref"]][[index]], sub = paste0("(Unrefined: ", methods.alpha[index],")") )
@@ -264,7 +264,7 @@ plot(caseInfStats[["mod.unref"]][[index]], sub = paste0("(Unrefined: ", methods.
 
 
 
-```{r}
+```{r fig.height=4, fig.width=6}
 
 index <- "Richness"
 plot(caseInfStats[["mod.unref"]][[index]], sub = paste0("(Unrefined: ", methods.alpha[index],")") )
@@ -401,7 +401,7 @@ names(caseInfStats[["ref.plot"]]) <- names(methods.alpha)
 After removing the unusual observations, the plots for each indice appear to have been improved. However, the Simpson's data appears to not meet the assumptions of normality.
 
 ### Shannon
-```{r}
+```{r fig.height=4, fig.width=6}
 
 index <- "Shannon"
 plot(caseInfStats[["mod.ref"]][[index]], sub = paste0("(Refined: ", methods.alpha[index],")") )
@@ -409,7 +409,7 @@ plot(caseInfStats[["mod.ref"]][[index]], sub = paste0("(Refined: ", methods.alph
 ```
 
 ### Simpson
-```{r}
+```{r fig.height=4, fig.width=6}
 
 index <- "Simpson"
 plot(caseInfStats[["mod.ref"]][[index]], sub = paste0("(Refined: ", methods.alpha[index],")") )
@@ -417,7 +417,7 @@ plot(caseInfStats[["mod.ref"]][[index]], sub = paste0("(Refined: ", methods.alph
 ```
 
 ### Phylogenetic
-```{r}
+```{r fig.height=4, fig.width=6}
 
 index <- "Phylogenetic"
 plot(caseInfStats[["mod.ref"]][[index]], sub = paste0("(Refined: ", methods.alpha[index],")") )
@@ -425,7 +425,7 @@ plot(caseInfStats[["mod.ref"]][[index]], sub = paste0("(Refined: ", methods.alph
 ```
 
 ### Richness
-```{r}
+```{r fig.height=4, fig.width=6}
 
 index <- "Richness"
 plot(caseInfStats[["mod.ref"]][[index]], sub = paste0("(Refined: ", methods.alpha[index],")") )
@@ -458,7 +458,7 @@ caseStatisticsPlots
 
 ## Shannon
 
-```{r message=FALSE, warning=FALSE}
+```{r fig.height=4, fig.width=6, message=FALSE, warning=FALSE}
 index <- "Shannon"
 
 Anova(caseInfStats[["mod.ref"]][[index]], type = 2)
@@ -469,7 +469,7 @@ Anova(caseInfStats[["mod.ref"]][[index]], type = 2) %>% report()
 
 ## Simpson
 
-```{r message=FALSE, warning=FALSE}
+```{r fig.height=4, fig.width=6, message=FALSE, warning=FALSE}
 index <- "Simpson"
 
 Anova(caseInfStats[["mod.ref"]][[index]], type = 2)
@@ -480,7 +480,7 @@ Anova(caseInfStats[["mod.ref"]][[index]], type = 2) %>% report()
 
 ## Phylogenetic
 
-```{r message=FALSE, warning=FALSE}
+```{r fig.height=4, fig.width=6, message=FALSE, warning=FALSE}
 index <- "Phylogenetic"
 
 Anova(caseInfStats[["mod.ref"]][[index]], type = 2)
@@ -491,7 +491,7 @@ Anova(caseInfStats[["mod.ref"]][[index]], type = 2) %>% report()
 
 ## Richness
 
-```{r message=FALSE, warning=FALSE}
+```{r fig.height=4, fig.width=6, message=FALSE, warning=FALSE}
 index <- "Richness"
 
 Anova(caseInfStats[["mod.ref"]][[index]], type = 2)
