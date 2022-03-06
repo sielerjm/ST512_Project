@@ -1,0 +1,412 @@
+---
+title: "Zebrafish Diet and Infection Targetted Analysis"
+author: "Sunni Patton, Connor Draney, Kelly Shannon, Michael Sieler"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    number_sections: yes
+    theme: united
+    highlight: tango
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Check project file location is in correct directory
+## Path to project directory (Rproject file should be stored in "~/Code")
+proj.path <- file.path(paste0(getwd(),"/../Code"))
+
+
+# Helper Scripts
+
+## Load libraries
+source(paste0(proj.path,"/HelperScripts/libraries.R"))
+
+## Load functions
+source(paste0(proj.path,"/HelperScripts/Functions.R")) 
+
+## Load custom plot settings
+source(paste0(proj.path,"/HelperScripts/plot_settings.R"))
+
+
+# Set important paths
+
+## Path to data files/sub-folders
+data.path <- paste0(proj.path,  # Project path
+                               "/../Data")  # Sub-directory
+
+## Path to Robjects (Renv, Rds, Rdata, etc.) saved here
+objects.path <- paste0(data.path,  # Project path
+                                  "/Clean/Robjects")  # Sub-directory
+
+## Path to Output (Figures, Tables)
+output.path <- paste0(proj.path,  # Project path
+                                 "/../Output")  # Sub-directory
+
+
+```
+
+
+# Import Data
+```{r import-data}
+
+# Download Data
+# temp_test = tempfile()
+# test_url = "http://joey711.github.io/phyloseq-demo/HMPv35.RData"
+# download.file(test_url, destfile = paste0(data.path, "/Raw/HMPv35.RData"))
+
+load(paste0(data.path, "/Raw/HMPv35.RData"))
+ps.unclean <- HMPv35
+rm(HMPv35)  # remove this obj from global env
+```
+
+## Clean sample data
+```{r clean-sample-data}
+
+# Find the center with largest counts for the following conditions
+sample.data.frame(ps.unclean) %>% 
+  count(RUNCENTER,
+        Mislabeled,
+        Contaminated, 
+        visitno) %>% 
+  arrange(-n)
+
+# Subset based on parameters
+ps.cleaned <- subset_samples(ps.unclean,  # physeq object
+                              Mislabeled == F &  # Remove mislabeled
+                              Contaminated == F &  # remove contaminated
+                              visitno == 1 & # first visit, so no repeat sampling of individuals, independence
+                              RUNCENTER == "JCVI"  # Same center, independence
+                              )
+
+
+# Remove columns, if rownames are already sample names, no need to have an extra sample column
+sample_data(ps.cleaned) <- sample_data(ps.cleaned)[, c(-1)]  # [rows, cols]
+
+print(paste0("Dropped ", nrow(sample_data(ps.unclean)) - nrow(sample_data(ps.cleaned)), " samples after cleaning."))
+
+head(sample.data.frame(ps.cleaned))
+```
+
+
+
+
+# Normalization
+```{r normalization, message=FALSE, warning=FALSE}
+ps.norm <- ps.cleaned
+rarefaction.minimum <- 1000
+min.smpl.size <- min(sample_sums(ps.norm)[sample_sums(ps.norm) >= rarefaction.minimum])
+
+summary(sample_sums(ps.norm))
+
+# Rarefy
+
+ps.rar <- {
+  ps.rar.tmp0 <- ps.norm
+  ps.rar.tmp1 <- rarefy_even_depth(
+      physeq = ps.rar.tmp0, 
+      sample.size = min.smpl.size,
+      trimOTUs = TRUE,
+      rngseed = 42
+      )
+  rename.NA.taxa(ps.rar.tmp1)
+}
+
+ps.clr <- {
+  clr.mat <- gen.clr.matrix(asv.mat = otu.matrix(ps.norm), min_reads = min.smpl.size)
+  ps.clr <- prune_taxa(colnames(clr.mat), ps.norm)
+  otu_table(ps.clr) <- otu_table(clr.mat, taxa_are_rows = F)
+  rename.NA.taxa(ps.clr)
+}
+
+
+ps.rar
+ps.clr
+```
+
+
+
+
+# Plot pre and post normalization
+```{r pre-post-norm}
+# rare.plot.preRare <- rarecurve(t(otu_table(ps.norm)), step=50, cex=0.5, label=F)
+hist(sample_sums(ps.norm), main="Histogram: Read Counts before rarefaction", xlab="Total Reads",
+     border="blue", col="green", las=1, breaks=12)
+hist(sample_sums(ps.rar), main="Histogram: Read Counts after rarefaction", xlab="Total Reads",
+     border="blue", col="green", las=1, breaks=12)
+
+hist(sample_sums(ps.norm), main="Histogram: Read Counts before CLR", xlab="Total Reads",
+     border="blue", col="green", las=1, breaks=12)
+hist(sample_sums(ps.clr), main="Histogram: Read Counts after CLR", xlab="Total Reads",
+     border="blue", col="green", las=1, breaks=12)
+
+     
+```
+
+
+
+```{r physeq-obj-list}
+# Make a list of phyloseq objects, dataframes and datatables
+ps.list <- list(RAR = list(ps.all = ps.rar,
+                           df.all = sample.data.frame(ps.rar),
+                           dt.all = sample.data.table(ps.rar) ),
+                CLR = list(ps.all = ps.clr,
+                           df.all = sample.data.frame(ps.clr),
+                           dt.all = sample.data.table(ps.clr) )
+                )
+
+# Add observation numbers to data
+ps.list[["RAR"]][["df.all"]] <- dplyr::mutate(ps.list[["RAR"]][["df.all"]], obs_num = row_number(), .before = 1)
+ps.list[["RAR"]][["dt.all"]] <- dplyr::mutate(ps.list[["RAR"]][["dt.all"]], obs_num = row_number(), .before = 1)
+
+
+head(ps.list$RAR$df.all)
+head(ps.list$CLR$df.all)
+```
+
+
+# Alpha-diversity
+
+```{r alpha-diversity}
+# Select which alpha measures we want to analyze
+methods.alpha <- c("Shannon", "Simpson", # Non-phylogenetic measures, add additional measures here
+                   "Phylogenetic", "Richness") %>%  # Don't add measures additional. You can find different measures here: ?estimate_richness()
+                  purrr::set_names()  # Set's names list elements in "alpha.methods"
+
+# Calculate alpha scores, save to list
+ps.list$RAR[["alphaScore"]] <- alpha_base(ps.list$RAR$ps.all,  # Phyloseq object
+                               methods.alpha,  # list of alpha methods
+                               "Sample",
+                               phylo.div = T
+                               )
+
+
+# Add alpha scores to data table
+ps.list$RAR[["dt.all.alpha"]] <- ps.list$RAR$dt.all[ps.list$RAR$alpha, on = "Sample"] %>% setkeyv("Sample")
+
+# Melt data table
+ps.list$RAR[["dt.all.alpha.melt"]] <- melt_to_datatable_2(datatable1 = ps.list$RAR$dt.all, 
+                                                               datatable2 = ps.list$RAR$dt.all.alpha, 
+                                                               vars = methods.alpha, 
+                                                               var.name = "Alpha.Metric",
+                                                               samp.name = "Sample",
+                                                               val.name = "Alpha.Score"
+                                                              )
+
+# Normalize scores from 0 to 1 for easier comparison across metrics, save to list
+ps.list$RAR[["alphaNorm"]] <- norm_alpha_score(alpha.base = ps.list$RAR$alphaScore,  # Phyloseq object
+                                               sample.df = ps.list$RAR$df.all,  # dataframe
+                                               methods = methods.alpha  # list of alpha methods
+                                              )  
+
+# Add normalized alpha scores to data table
+ps.list$RAR[["dt.all.alphaNorm"]] <- ps.list$RAR$dt.all[ps.list$RAR$alphaNorm, on = "Sample"] %>% setkeyv("Sample")
+
+# Melt normalized data table
+ps.list$RAR[["dt.all.alphaNorm.melt"]] <- melt_to_datatable_2(datatable1 = ps.list$RAR$dt.all, 
+                                                               datatable2 = ps.list$RAR$dt.all.alphaNorm, 
+                                                               vars = methods.alpha, 
+                                                               var.name = "Alpha.Metric",
+                                                               samp.name = "Sample",
+                                                               val.name = "Alpha.Score"
+                                                              )
+
+```
+
+
+
+
+# Check assumptions and remove unusual observations
+
+```{r check-assumptions, echo=TRUE, fig.height=5, fig.width=8, message=FALSE, warning=FALSE}
+
+caseInfStats <- list()
+
+data <- ps.list$RAR[["dt.all.alpha.melt"]]
+# data <- dplyr::mutate(data, obs_num = row_number(), .before = 1)
+
+caseInfStats[["mod.unref"]] <- lapply(methods.alpha, function(alpha){
+  lm( formula = "Alpha.Score ~ sex*HMPbodysubsite",
+       data = subset(data, Alpha.Metric == alpha)
+      )
+})
+
+# Fortify data for plotting
+caseInfStats[["dataFort.unref"]] <- lapply(methods.alpha, function(alpha){
+  fortify(caseInfStats$mod.unref[[alpha]], subset(data, Alpha.Metric == alpha))
+})
+
+# Rename some column names
+lapply(methods.alpha, function(alpha){
+  setnames(caseInfStats$dataFort.unref[[alpha]], 
+           old=c(".hat", ".cooksd", ".stdresid"), 
+           new=c("Lev", "CooksD", "StdResid"))
+})
+
+
+# Unrefinded model
+
+## Plot
+
+caseInfStats[["unref.plot"]] <- lapply(names(methods.alpha), function(alpha){
+  qplot(obs_num, value, data = reshape::melt(caseInfStats$dataFort.unref[[alpha]][, c("obs_num","Lev", "CooksD", "StdResid")],
+    id.vars = "obs_num")) + 
+    geom_point(aes(color = variable)) +
+    facet_grid(variable ~ ., scale = "free_y") + 
+    labs(title = paste0("Case-influence statistics plot: unrefined model (", alpha,")")) + 
+    scale_color_brewer(palette = "Dark2") + 
+    theme(legend.position = "none") + scale_x_continuous(breaks = scales::breaks_pretty(10))
+
+}) 
+
+names(caseInfStats[["unref.plot"]]) <- names(methods.alpha)
+
+
+
+# Refined model
+
+### Statisticians use rough cutoffs of 2p/n (p is the number of unknown parameters in the model) for leverage, 1 for Cook’s Distance and above 2 or below -2 for standardized residuals. Observations falling outside these ranges warrant further attention.
+
+caseInfStats[["cutoff.lev"]] <- lapply(methods.alpha, function(alpha){
+  cutOff.lev <- (2 * length(caseInfStats$mod.unref[[alpha]][["coefficients"]]) / nrow(caseInfStats$dataFort.unref[[alpha]]))
+})
+
+
+caseInfStats[["dataFort.sub"]] <- lapply(methods.alpha, function(alpha){
+  caseInfStats$dataFort.unref[[alpha]]  %>%
+    dplyr::filter(Lev < caseInfStats[["cutoff.lev"]][[alpha]]) %>%  # Leverage Cut off
+    dplyr::filter(StdResid < 2 & StdResid > -2 ) %>%  # StdResid Cut Off
+    dplyr::select(obs_num:Alpha.Score)  # Removes the old case statistic influence data
+})
+
+# View(caseInfStats[["dataFort.sub"]][["Shannon"]] )
+
+
+# make refined model
+caseInfStats[["mod.ref"]] <- lapply(methods.alpha, function(alpha){
+  lm( formula = "Alpha.Score ~ sex*HMPbodysubsite",
+       data = caseInfStats[["dataFort.sub"]][[alpha]]
+      )
+})
+
+
+# Fortify data for plotting
+caseInfStats[["dataFort.ref"]] <- lapply(methods.alpha, function(alpha){
+  fortify(caseInfStats$mod.ref[[alpha]], caseInfStats[["dataFort.sub"]][[alpha]])
+})
+
+# Rename some column names
+lapply(methods.alpha, function(alpha){
+  setnames(caseInfStats$dataFort.ref[[alpha]], 
+           old=c(".hat", ".cooksd", ".stdresid"), 
+           new=c("Lev", "CooksD", "StdResid"))
+})
+
+
+# Refinded model Plot
+
+caseInfStats[["ref.plot"]] <- lapply(names(methods.alpha), function(alpha){
+  tmp.data <- caseInfStats[["dataFort.ref"]]
+  qplot(obs_num, value, data = reshape::melt(tmp.data[[alpha]][, c("obs_num","Lev", "CooksD", "StdResid")],
+    id.vars = "obs_num")) + 
+    geom_point(aes(color = variable)) +
+    facet_grid(variable ~ ., scale = "free_y") + 
+    labs(title = paste0("Case-influence statistics plot: Refined model (", alpha,")")) + 
+    scale_color_brewer(palette = "Dark2") + 
+    theme(legend.position = "none") + scale_x_continuous(breaks = scales::breaks_pretty(10))
+
+}) 
+
+names(caseInfStats[["ref.plot"]]) <- names(methods.alpha)
+
+
+```
+
+```{r case-inf-plots, echo=FALSE, message=FALSE, warning=FALSE}
+## Unrefined Plots ##
+caseInfStats[["unref.plot"]]
+
+lapply(methods.alpha, function(alpha){
+  plot(caseInfStats[["mod.unref"]][[alpha]], sub = paste0("(",alpha,")") )
+})
+
+
+## Refined Plots ##
+caseInfStats[["ref.plot"]]
+
+lapply(methods.alpha, function(alpha){
+  plot(caseInfStats[["mod.ref"]][[alpha]], sub = paste0("(",alpha,")") )
+})
+```
+
+
+
+### Plot unrefined and refined models
+```{r plot-unref-ref}
+
+# Combine Plots
+caseStatisticsPlots <- lapply(methods.alpha, function(alpha){
+   marrangeGrob(list(caseInfStats[["unref.plot"]][[alpha]], 
+                     caseInfStats[["ref.plot"]][[alpha]]), 
+                nrow = 2, ncol = 1, top=NULL)
+})
+
+
+caseStatisticsPlots
+
+```
+
+
+
+```{r case-inf-stats, echo=FALSE, fig.height=5, fig.width=5}
+
+lapply(methods.alpha, function(alpha){
+  summary(caseInfStats[["mod.ref"]][[alpha]])
+})
+
+lapply(methods.alpha, function(alpha){
+  Anova(caseInfStats[["mod.ref"]][[alpha]], type = 2)
+})
+
+```
+
+
+# Plot
+
+## Unnormalized
+
+
+```{r plot-unnorm}
+
+
+ps.list[["RAR"]][["Plots"]] <- list()
+ps.list[["RAR"]][["Plots"]] <- lapply(names(methods.alpha), function(alpha){
+  tmp.data <- na.omit(as.data.frame(caseInfStats[["dataFort.ref"]][[alpha]]) )
+  ggplot(tmp.data, aes(x = HMPbodysubsite, y=Alpha.Score)) +
+      geom_boxplot(aes(fill = HMPbodysubsite)) + 
+      ggbeeswarm::geom_quasirandom(size = 0.75) +  # spaces the dots out nicely
+      facet_grid(. ~ .) +  # (Y-axis ~ X-axis)
+      theme(legend.position = "none",
+            axis.text.x = element_text(angle = 33, hjust = 1, vjust=1)
+            ) +
+      labs(
+        title = "Diversity Scores",
+        # caption = "",
+        y = paste0("Diversity (", alpha,")"),
+        x = "SampleType"
+      ) 
+}) 
+
+names(ps.list[["RAR"]][["Plots"]]) <- names(methods.alpha)
+
+ps.list[["RAR"]][["Plots"]]
+
+```
+
+
+

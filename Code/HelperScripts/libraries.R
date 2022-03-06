@@ -59,10 +59,13 @@ library(gridExtra)  # use marrangeGrob, for combineing plots
 # # library(WRS2)  # for data, ggstatsplot
 # # library(afex)  # to run anova, ggstatsplot
 # library(easystats)
-# library(report)
+library(report)
 # library(parameters)
 # library(ggpubr)
-
+# library(CoDaSeq)  # For CLR transformations, PCOA plots
+# library(zCompositions)  # For CLR transformations
+# library(nlme)  # Ancom dependency
+# library(compositions)  # Ancom dependency
 
 ## Installing packages
 
