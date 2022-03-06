@@ -4,6 +4,11 @@
 
 # Session Data files
 #.RData
+*ST512_Project_2022-03-06ENV.RData
+*ps-unclean.RData
+*ps-cleaned.RData
+*ps-rar.RData
+*ps-list.RData
 
 # User-specific files
 .Ruserdata

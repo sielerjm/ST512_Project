@@ -68,7 +68,115 @@ melt_to_datatable_2 <- function(datatable1, datatable2, vars, var.name, samp.nam
 }
 
 
-# -------------------------------------------------------------------------
+
+
+
+# Linear regression plots --------------------------------------------------------
+#   Description: 
+#   Input: 
+#   Output: 
+
+check_assump_plots <- function(data, 
+                               alpha,
+                               num.row = 2,
+                               num.col = 2
+                               ){
+  
+  tmp.plot.list <- list()
+    
+    # Residuals vs Fitted
+    tmp.plot.list$resVsFit <- res_vs_fitted(data[[alpha]], alpha)
+    
+    # Q-Q Plot
+    tmp.plot.list$qqPlot <- qq_plot(data[[alpha]], alpha)
+    
+    # Scale Location
+    tmp.plot.list$scaleLocPlot <- scale_loc_plot(data[[alpha]], alpha)
+    
+    # Residuals vs Leverage
+    tmp.plot.list$resVsLev <- res_vs_lev_plot(data[[alpha]])
+
+  # return(tmp.plot.list)
+    
+  return( marrangeGrob(tmp.plot.list, nrow = 2, ncol = 2, top=paste0("Check Assumptions (LM): ", alpha)) )
+}
+
+res_vs_fitted <- function(data, alpha){
+  
+  tmp.plot <- {
+    ggplot(data, aes(x=fitted(data), y=residuals(data))) + 
+      geom_point(size = .75, alpha = .5) + 
+      geom_smooth(method = "lm", color = "red") + 
+      labs(title = "Residuals vs Fitted",
+           # caption = alpha,
+           x = "Fitted values",
+           y = "Residuals"
+      )
+  }
+  
+  return (tmp.plot)
+}
+
+qq_plot <- function(data, alpha){
+  
+  tmp.plot <- {
+    ggplot(data, aes(sample = stdres(data))) +
+      stat_qq(size = .75, alpha = .5) +
+      stat_qq_line(color = "red") +
+      labs(title = "Normal Q-Q",
+           # caption = alpha,
+           x = "Theoretical Quantiles",
+           y = "Standardized Residuals"
+      )
+  }
+  
+  return (tmp.plot)
+}
+
+scale_loc_plot <- function(data, alpha){
+  
+  tmp.plot <- {
+    ggplot(data, aes(x=fitted(data), y=sqrt(stdres(data))) ) + 
+      geom_point(size = .75, alpha = .5) + 
+      geom_smooth(method = "lm", color = "red") + 
+      labs(title = "Scale Location",
+           # caption = alpha,
+           x = "Fitted values",
+           y = "sqrt( Standardized Residuals )"
+      )
+  }
+  
+  return (tmp.plot)
+}
+
+res_vs_lev_plot <- function(data){
+  
+  tmp.plot <- {
+    ggplot(data, aes(x=cooks.distance(data), y=stdres(data)) ) +
+      geom_point(size = .75, alpha = .5) +
+      geom_smooth(method = "lm", color = "red") +
+      labs(title = "Residuals vs Leverage",
+           # caption = alpha,
+           x = "Leverage",
+           y = "Standardized Residuals"
+      )
+  }
+  
+  return ( tmp.plot )
+}
+
+
+
+# Name of function --------------------------------------------------------
+#   Description: 
+#   Input: 
+#   Output: 
+
+lev_cutoff <- function(data, alpha) {
+  cutOff.lev <- (2 * length(caseInfStats$mod.unref[[alpha]][["coefficients"]]) / 
+                   nrow(caseInfStats$dataFort.unref[[alpha]]))
+}
+
 
 
 # Name of function --------------------------------------------------------
@@ -77,16 +185,7 @@ melt_to_datatable_2 <- function(datatable1, datatable2, vars, var.name, samp.nam
 #   Output: 
 
 
-# -------------------------------------------------------------------------
 
-
-# Name of function --------------------------------------------------------
-#   Description: 
-#   Input: 
-#   Output: 
-
-
-# -------------------------------------------------------------------------
 
 
 # Name of function --------------------------------------------------------
@@ -95,15 +194,6 @@ melt_to_datatable_2 <- function(datatable1, datatable2, vars, var.name, samp.nam
 #   Output: 
 
 
-# -------------------------------------------------------------------------
 
-
-# Name of function --------------------------------------------------------
-#   Description: 
-#   Input: 
-#   Output: 
-
-
-# -------------------------------------------------------------------------
 
 

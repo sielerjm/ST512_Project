@@ -1,23 +1,35 @@
 ---
-title: "Zebrafish Diet and Infection Targetted Analysis"
+title: "ST 512 Project"
+subtitle: "Body Sub-site Predicts Microbiome Diversity in Humans"
 author: "Connor Draney, Sunni Patton, Kelly Shannon, Michael Sieler"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
-  pdf_document:
-    toc: yes
-    toc_depth: '3'
   html_document:
     toc: yes
     toc_depth: 3
     number_sections: yes
     theme: united
     highlight: tango
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-# Check project file location is in correct directory
+# Load previously saved environment (check date)
+# load(paste0(saveObj.path, "/ST512_Project_2022-03-06_ENV.RData"))
+
+# Setting Redo analysis to FALSE allows you to knit the document without needing to run lengthy functions
+redo.analysis <- list(redo.importData = F,  # You'll need to set this to TRUE for your first time running
+                      redo.cleanData = F,  # You'll need to set this to TRUE for your first time running
+                      redo.rarefy = F,  # You'll need to set this to TRUE for your first time running
+                      redo.alphaDiv = F,
+                      redo.plots = F)
+
+
+# Check project file location is in correct directory1`
 ## Path to project directory (Rproject file should be stored in "~/Code")
 proj.path <- file.path(paste0(getwd(),"/../Code"))
 
@@ -40,6 +52,10 @@ source(paste0(proj.path,"/HelperScripts/plot_settings.R"))
 data.path <- paste0(proj.path,  # Project path
                                "/../Data")  # Sub-directory
 
+## Path to saved objects files/sub-folders
+saveObj.path <- paste0(proj.path,  # Project path
+                               "/../Data/SavedObjects")  # Sub-directory
+
 ## Path to Robjects (Renv, Rds, Rdata, etc.) saved here
 objects.path <- paste0(data.path,  # Project path
                                   "/Clean/Robjects")  # Sub-directory
@@ -49,23 +65,70 @@ output.path <- paste0(proj.path,  # Project path
                                  "/../Output")  # Sub-directory
 
 
+
+
+
 ```
 
+# Analysis Overview
+
+## Research Question
+
+Can we predict alpha diversity scores based on sex, body sub-site or the interaction of these two terms?
+
+## Hypothesis
+
+The human body is comprised of multiple body sites with unique environmental conditions, we hypothesis these areas will manifest unique alpha diversity scores between body sub-sites. Furthermore, we also hypothesize that these areas will differ based on sex and the interaction of body sub-site and sex. 
+
+## Statistical analysis
+
+All statistical analyses and visualizations were conducted in R (v 4.0.5) unless otherwise specified. Data was obtained from the Human Microbiome Project (https://www.hmpdacc.org/micro_analysis/microbiome_analyses.php). After removal of samples of a read depth of less than 1,000 the minimum read depth of 1,003, NAs were removed at the Phylum level and 292 ASVs were identified. Additionally, we filtered for samples that were processed at JCCI, not repeated samples from an individual, and not marked as misslabeled or contaminated. Alpha-diversity was calculated using estimate_richness function (Phyloseq v 1.38.0). Alpha-scores were calculated using Shannon, Simpson, Phylogenetic, and Richness indices. Using case influence statistics, we removed any unusual observations that fell beyond standard cutoff values for Cook's Distance, leverage and standardized residuals. These data were then analyzed using linear models (LMs) to build models in order to determine the best predictors of alpha-diversity. Two-way ANOVA was used to assess the models. 
+
+## Results
+
+We obtained 16S rRNA gene sequence data to investigate how the human microbiome diversity may be influenced by body sub-site or sex. To assess diversity, we used linear models (LMs) to identify parameters, such as body sub-site, that best explained the variation in microbiome diversity, as measured by Shannon, Simpson, Phylogenetic and Richness Diversity Indices. The results from our ANOVA tests:
+
+* Shannon: 
+  * The main effect of sex is statistically significant and small (F(1, 488) = 12.31, p < .001; 95% CI [6.98e-03, 1.00]). The main effect of HMPbodysubsite is statistically significant and large (F(15, 488) = 96.72, p < .001; CI [0.72, 1.00]). The interaction between sex and HMPbodysubsite is statistically significant and medium (F(12, 488) = 2.74, p = 0.001; 95% CI [0.01, 1.00]).
+* Simpson: 
+  * The main effect of sex is statistically not significant and very small (F(1, 479) = 2.19, p = 0.139; 95% CI [0.00, 1.00]). The main effect of HMPbodysubsite is statistically significant and large (F(15, 479) = 62.57, p < .001; 95% CI [0.62, 1.00]). The interaction between sex and HMPbodysubsite is statistically not significant and small (F(12, 479) = 0.92, p = 0.532; 95% CI [0.00, 1.00])
+* Phylogenetic: 
+  * The main effect of sex is statistically significant and very small (F(1, 500) = 3.95, p = 0.047; 95% CI [4.65e-05, 1.00]). The main effect of HMPbodysubsite is statistically significant and large (F(15, 500) = 110.86, p < .001; 95% CI [0.74, 1.00]). The interaction between sex and HMPbodysubsite is statistically significant and small (F(12, 500) = 2.55, p = 0.003; 95% CI [0.01, 1.00])
+* Richness: 
+  * The main effect of sex is statistically significant and very small (F(1, 500) = 3.95, p = 0.047; 95% CI [4.65e-05, 1.00]). The main effect of HMPbodysubsite is statistically significant and large (F(15, 500) = 110.86, p < .001; 95% CI [0.74, 1.00]). The interaction between sex and HMPbodysubsite is statistically significant and small (F(12, 500) = 2.55, p = 0.003; 95% CI [0.01, 1.00])
+   
+**Summary:**
+
+* Overall, our results suggest that the main effect of body sub-site and sex are statistically significant across all indics, except for in the Simposon's index sex is not statistically significant. Furthermore, the interaction of body sub-site and sex is statistically significant in all but Simpson's index. 
+
+  
+  
 
 # Import Data
 
 We obtained data in the form of a [phyloseq](https://joey711.github.io/phyloseq/) data object from the [Human Genome Project](https://www.hmpdacc.org/hmp/) (HMP) that was previously processed for taxanomic identification of microbial organisms. We then cleaned and processed the data further for statistical analysis.
 
 ```{r import-data}
+if(redo.analysis$redo.importData == T){
+  
+  # Download Data
+  # temp_test = tempfile()
+  # test_url = "http://joey711.github.io/phyloseq-demo/HMPv35.RData"
+  # download.file(test_url, destfile = paste0(data.path, "/Raw/HMPv35.RData"))
+  
+  load(paste0(data.path, "/Raw/HMPv35.RData"))
+  ps.unclean <- HMPv35
+  rm(HMPv35)  # remove this obj from global env
+  
+  # Save
+  save(ps.unclean, file = paste0(saveObj.path, "/ps-unclean.RData"))
+  
+} else {
+  
+  # Load
+  load(file = paste0(saveObj.path, "/ps-unclean.RData"))
 
-# Download Data
-# temp_test = tempfile()
-# test_url = "http://joey711.github.io/phyloseq-demo/HMPv35.RData"
-# download.file(test_url, destfile = paste0(data.path, "/Raw/HMPv35.RData"))
-
-load(paste0(data.path, "/Raw/HMPv35.RData"))
-ps.unclean <- HMPv35
-rm(HMPv35)  # remove this obj from global env
+}
 ```
 
 ## Clean sample data
@@ -75,34 +138,45 @@ The 4743 samples in the HMP were obtained from multiple individuals (2555 males 
 
 ```{r clean-sample-data}
 
-# Find the center with largest counts for the following conditions
-sample.data.frame(ps.unclean) %>% 
-  count(RUNCENTER,
-        Mislabeled,
-        Contaminated, 
-        visitno) %>% 
-  arrange(-n)
+if(redo.analysis$redo.cleanData == T){
 
-# Subset based on parameters
-ps.cleaned <- subset_samples(ps.unclean,  # physeq object
-                              Mislabeled == F &  # Remove mislabeled
-                              Contaminated == F &  # remove contaminated
-                              visitno == 1 & # first visit, so no repeat sampling of individuals, independence
-                              RUNCENTER == "JCVI"  # Same center, independence
-                              )
+  # Find the center with largest counts for the following conditions
+  sample.data.frame(ps.unclean) %>% 
+    count(RUNCENTER,
+          Mislabeled,
+          Contaminated, 
+          visitno) %>% 
+    arrange(-n)
+  
+  # Subset based on parameters
+  ps.cleaned <- subset_samples(ps.unclean,  # physeq object
+                                Mislabeled == F &  # Remove mislabeled
+                                Contaminated == F &  # remove contaminated
+                                visitno == 1 & # first visit, so no repeat sampling of individuals, independence
+                                RUNCENTER == "JCVI"  # Same center, independence
+                                )
+  
+  
+  # Remove columns, if rownames are already sample names, no need to have an extra sample column
+  sample_data(ps.cleaned) <- sample_data(ps.cleaned)[, c(-1)]  # [rows, cols]
+  
+  # Check to see how many samples dropped from original dataset
+  print(paste0("Dropped ", 
+               nrow(sample_data(ps.unclean)) - nrow(sample_data(ps.cleaned)), 
+               " samples after cleaning.")
+              )
+  
+  rm(ps.unclean)  # remove this obj from global env
 
-
-# Remove columns, if rownames are already sample names, no need to have an extra sample column
-sample_data(ps.cleaned) <- sample_data(ps.cleaned)[, c(-1)]  # [rows, cols]
-
-# Check to see how many samples dropped from original dataset
-print(paste0("Dropped ", 
-             nrow(sample_data(ps.unclean)) - nrow(sample_data(ps.cleaned)), 
-             " samples after cleaning.")
-            )
-
-# head(sample.data.frame(ps.cleaned))
-
+  # Save
+  save(ps.cleaned, file = paste0(saveObj.path, "/ps-cleaned.RData"))
+  
+} else {
+  
+  # Load
+  load(file = paste0(saveObj.path, "/ps-cleaned.RData"))
+  
+}
 
 ```
 
@@ -113,26 +187,37 @@ print(paste0("Dropped ",
 We rarefied the data to control for uneven sampling efforts  [Sanders, H. L. (1968)](https://www.journals.uchicago.edu/doi/abs/10.1086/282541), [Willis, A.D.  (2019)](https://www.frontiersin.org/articles/10.3389/fmicb.2019.02407/full#B13).
 
 ```{r rarefaction, message=FALSE, warning=FALSE}
-ps.norm <- ps.cleaned
-rarefaction.minimum <- 1000
-min.smpl.size <- min(sample_sums(ps.norm)[sample_sums(ps.norm) >= rarefaction.minimum])
 
-summary(sample_sums(ps.norm))
+if(redo.analysis$redo.rarefy == T){
 
-# Rarefy
+  rarefaction.minimum <- 1000
+  min.smpl.size <- min(sample_sums(ps.cleaned)[sample_sums(ps.cleaned) >= rarefaction.minimum])
+  
+  summary(sample_sums(ps.cleaned))
+  
+  # Rarefy
+  
+  ps.rar <- {
+    ps.rar <- ps.cleaned
+    ps.rar <- rarefy_even_depth(
+        physeq = ps.rar, 
+        sample.size = min.smpl.size,
+        trimOTUs = TRUE,
+        rngseed = 42
+        )
+    rename.NA.taxa(ps.rar)
+  }
 
-ps.rar <- {
-  ps.rar.tmp0 <- ps.norm
-  ps.rar.tmp1 <- rarefy_even_depth(
-      physeq = ps.rar.tmp0, 
-      sample.size = min.smpl.size,
-      trimOTUs = TRUE,
-      rngseed = 42
-      )
-  rename.NA.taxa(ps.rar.tmp1)
+  
+  # Save
+  save(ps.rar, file = paste0(saveObj.path, "/ps-rar.RData"))
+  
+} else {
+  
+  # Load
+  load(file = paste0(saveObj.path, "/ps-rar.RData"))
+
 }
-
-ps.rar
 
 ```
 
@@ -144,10 +229,10 @@ ps.rar
 Check the number of reads before and after rarefaction.
 
 ```{r pre-post-norm}
-# rare.plot.preRare <- rarecurve(t(otu_table(ps.norm)), step=50, cex=0.5, label=F)
-hist(sample_sums(ps.norm), main="Histogram: Read Counts before rarefaction", xlab="Total Reads",
+
+hist(sample_sums(ps.cleaned), main="Histogram: Read Counts before rarefaction", xlab="Total Reads",
      border="blue", col="green", las=1, breaks=12)
-hist(sample_sums(ps.rar), main="Histogram: Read Counts after rarefaction", xlab="Total Reads",
+hist(sample_sums(ps.cleaned), main="Histogram: Read Counts after rarefaction", xlab="Total Reads",
      border="blue", col="green", las=1, breaks=12)
 
 ```
@@ -177,31 +262,42 @@ ps.list[["RAR"]][["dt.all"]] <- dplyr::mutate(ps.list[["RAR"]][["dt.all"]], obs_
 We calculated alpha diversity scores, a measure of number of unique organisms within a single sample, using the indices Shannon, Simpson, Phylogenetic, and Richness (Whittaker 1960). Each calculates alpha-diversity using slightly different mathematical approaches to measure evenness (distribution of organisms) and/or richness (number of organismss). If differences in results are seen between indices, this can reveal insights into which kinds of organisms are present (e.g., common vs rare).
 
 ```{r alpha-diversity}
+
 # Select which alpha measures we want to analyze
 methods.alpha <- c("Shannon", "Simpson", # Non-phylogenetic measures, add additional measures here
                    "Phylogenetic", "Richness") %>%   
                   purrr::set_names()  # Set's names list elements in "alpha.methods"
 
-# Calculate alpha scores, save to list
-ps.list$RAR[["alphaScore"]] <- alpha_base(ps.list$RAR$ps.all,  # Phyloseq object
-                               methods.alpha,  # list of alpha methods
-                               "Sample",
-                               phylo.div = T
-                               )
-
-
-# Add alpha scores to data table
-ps.list$RAR[["dt.all.alpha"]] <- ps.list$RAR$dt.all[ps.list$RAR$alpha, on = "Sample"] %>% setkeyv("Sample")
-
-# Melt data table
-ps.list$RAR[["dt.all.alpha.melt"]] <- melt_to_datatable_2(datatable1 = ps.list$RAR$dt.all, 
-                                                               datatable2 = ps.list$RAR$dt.all.alpha, 
-                                                               vars = methods.alpha, 
-                                                               var.name = "Alpha.Metric",
-                                                               samp.name = "Sample",
-                                                               val.name = "Alpha.Score"
-                                                              )
-
+if(redo.analysis$redo.alphaDiv == T){
+  
+  # Calculate alpha scores, save to list
+  ps.list$RAR[["alphaScore"]] <- alpha_base(ps.list$RAR$ps.all,  # Phyloseq object
+                                 methods.alpha,  # list of alpha methods
+                                 "Sample",
+                                 phylo.div = T
+                                 )
+  
+  
+  # Add alpha scores to data table
+  ps.list$RAR[["dt.all.alpha"]] <- ps.list$RAR$dt.all[ps.list$RAR$alpha, on = "Sample"] %>% setkeyv("Sample")
+  
+  # Melt data table
+  ps.list$RAR[["dt.all.alpha.melt"]] <- melt_to_datatable_2(datatable1 = ps.list$RAR$dt.all, 
+                                                                 datatable2 = ps.list$RAR$dt.all.alpha, 
+                                                                 vars = methods.alpha, 
+                                                                 var.name = "Alpha.Metric",
+                                                                 samp.name = "Sample",
+                                                                 val.name = "Alpha.Score"
+                                                                )
+  # Save
+  save(ps.list, file = paste0(saveObj.path, "/ps-list.RData"))
+  
+} else {
+  
+  # Load
+  base::load(file = paste0(saveObj.path, "/ps-list.RData"))
+  
+}
 
 ```
 
@@ -231,32 +327,37 @@ To assess if the assumptions of linear model regression were met, we visually in
 
 ### Shannon
 
-```{r fig.height=4, fig.width=6}
+```{r fig.height=8, fig.width=8, message=FALSE, warning=FALSE}
 
+data <- caseInfStats[["mod.unref"]]
 index <- "Shannon"
-plot(caseInfStats[["mod.unref"]][[index]], sub = paste0("(Unrefined: ", methods.alpha[index],")") )
+check_assump_plots(data, index)
 
 ```
+
 
 ### Simpson
 
 
 
-```{r fig.height=4, fig.width=6}
+```{r fig.height=8, fig.width=8, message=FALSE, warning=FALSE}
 
+data <- caseInfStats[["mod.unref"]]
 index <- "Simpson"
-plot(caseInfStats[["mod.unref"]][[index]], sub = paste0("(Unrefined: ", methods.alpha[index],")") )
-
+check_assump_plots(data, index)
 ```
 
 ### Phylogenetic
 
 
 
-```{r fig.height=4, fig.width=6}
+```{r fig.height=8, fig.width=8, message=FALSE, warning=FALSE}
 
+
+
+data <- caseInfStats[["mod.unref"]]
 index <- "Phylogenetic"
-plot(caseInfStats[["mod.unref"]][[index]], sub = paste0("(Unrefined: ", methods.alpha[index],")") )
+check_assump_plots(data, index)
 
 ```
 
@@ -264,10 +365,11 @@ plot(caseInfStats[["mod.unref"]][[index]], sub = paste0("(Unrefined: ", methods.
 
 
 
-```{r fig.height=4, fig.width=6}
+```{r fig.height=8, fig.width=8, message=FALSE, warning=FALSE}
 
-index <- "Richness"
-plot(caseInfStats[["mod.unref"]][[index]], sub = paste0("(Unrefined: ", methods.alpha[index],")") )
+data <- caseInfStats[["mod.unref"]]
+index <- "Shannon"
+check_assump_plots(data, index)
 
 ```
 
@@ -331,7 +433,7 @@ From the original 562 samples, we removed 45, 54, 33, and 31 unusual observation
 
 # Fit refined model
 
-After removing the unusual samples, we refit the data to a linear model.
+After removing the unusual samples, we again fit the data to a linear model to assess body sub-site, sex, or their interaction's ability to predict alpha-diversity score.
 
 ```{r refined-model, echo = T, results = 'hide', message=FALSE, warning=FALSE}
 
@@ -401,34 +503,42 @@ names(caseInfStats[["ref.plot"]]) <- names(methods.alpha)
 After removing the unusual observations, the plots for each indice appear to have been improved. However, the Simpson's data appears to not meet the assumptions of normality.
 
 ### Shannon
-```{r fig.height=4, fig.width=6}
 
+```{r fig.height=8, fig.width=8, message=FALSE, warning=FALSE}
+
+data <- caseInfStats[["mod.ref"]]
 index <- "Shannon"
-plot(caseInfStats[["mod.ref"]][[index]], sub = paste0("(Refined: ", methods.alpha[index],")") )
+check_assump_plots(data, index)
 
 ```
 
 ### Simpson
-```{r fig.height=4, fig.width=6}
 
+```{r fig.height=8, fig.width=8, message=FALSE, warning=FALSE}
+
+data <- caseInfStats[["mod.ref"]]
 index <- "Simpson"
-plot(caseInfStats[["mod.ref"]][[index]], sub = paste0("(Refined: ", methods.alpha[index],")") )
+check_assump_plots(data, index)
 
 ```
 
 ### Phylogenetic
-```{r fig.height=4, fig.width=6}
 
+```{r fig.height=8, fig.width=8, message=FALSE, warning=FALSE}
+
+data <- caseInfStats[["mod.ref"]]
 index <- "Phylogenetic"
-plot(caseInfStats[["mod.ref"]][[index]], sub = paste0("(Refined: ", methods.alpha[index],")") )
+check_assump_plots(data, index)
 
 ```
 
 ### Richness
-```{r fig.height=4, fig.width=6}
 
+```{r fig.height=8, fig.width=8, message=FALSE, warning=FALSE}
+
+data <- caseInfStats[["mod.ref"]]
 index <- "Richness"
-plot(caseInfStats[["mod.ref"]][[index]], sub = paste0("(Refined: ", methods.alpha[index],")") )
+check_assump_plots(data, index)
 
 ```
 
@@ -461,9 +571,10 @@ caseStatisticsPlots
 ```{r fig.height=4, fig.width=6, message=FALSE, warning=FALSE}
 index <- "Shannon"
 
-Anova(caseInfStats[["mod.ref"]][[index]], type = 2)
-caseInfStats[["mod.ref"]][[index]] %>% report()
 Anova(caseInfStats[["mod.ref"]][[index]], type = 2) %>% report()
+
+Anova(caseInfStats[["mod.ref"]][[index]], type = 2)
+caseInfStats[["mod.ref"]][[index]] %>% report_table()
 
 ```
 
@@ -472,9 +583,10 @@ Anova(caseInfStats[["mod.ref"]][[index]], type = 2) %>% report()
 ```{r fig.height=4, fig.width=6, message=FALSE, warning=FALSE}
 index <- "Simpson"
 
-Anova(caseInfStats[["mod.ref"]][[index]], type = 2)
-caseInfStats[["mod.ref"]][[index]] %>% report()
 Anova(caseInfStats[["mod.ref"]][[index]], type = 2) %>% report()
+
+Anova(caseInfStats[["mod.ref"]][[index]], type = 2)
+caseInfStats[["mod.ref"]][[index]] %>% report_table()
 
 ```
 
@@ -483,9 +595,11 @@ Anova(caseInfStats[["mod.ref"]][[index]], type = 2) %>% report()
 ```{r fig.height=4, fig.width=6, message=FALSE, warning=FALSE}
 index <- "Phylogenetic"
 
-Anova(caseInfStats[["mod.ref"]][[index]], type = 2)
-caseInfStats[["mod.ref"]][[index]] %>% report()
 Anova(caseInfStats[["mod.ref"]][[index]], type = 2) %>% report()
+
+Anova(caseInfStats[["mod.ref"]][[index]], type = 2)
+caseInfStats[["mod.ref"]][[index]] %>% report_table()
+
 
 ```
 
@@ -494,9 +608,11 @@ Anova(caseInfStats[["mod.ref"]][[index]], type = 2) %>% report()
 ```{r fig.height=4, fig.width=6, message=FALSE, warning=FALSE}
 index <- "Richness"
 
-Anova(caseInfStats[["mod.ref"]][[index]], type = 2)
-caseInfStats[["mod.ref"]][[index]] %>% report()
 Anova(caseInfStats[["mod.ref"]][[index]], type = 2) %>% report()
+
+Anova(caseInfStats[["mod.ref"]][[index]], type = 2)
+caseInfStats[["mod.ref"]][[index]] %>% report_table()
+
 
 ```
 
@@ -507,32 +623,51 @@ Anova(caseInfStats[["mod.ref"]][[index]], type = 2) %>% report()
 
 # Plots
 
-```{r plot-unnorm}
 
+```{r plots-sex-subbodysite}
 
-ps.list[["RAR"]][["Plots"]] <- list()
-ps.list[["RAR"]][["Plots"]] <- lapply(names(methods.alpha), function(alpha){
-  tmp.data <- na.omit(as.data.frame(caseInfStats[["dataFort.ref"]][[alpha]]) )
-  ggplot(tmp.data, aes(x = HMPbodysubsite, y=Alpha.Score)) +
-      geom_boxplot(aes(fill = HMPbodysubsite)) + 
-      ggbeeswarm::geom_quasirandom(size = 0.75) +  # spaces the dots out nicely
-      facet_grid(. ~ .) +  # (Y-axis ~ X-axis)
-      theme(legend.position = "none",
-            axis.text.x = element_text(angle = 33, hjust = 1, vjust=1)
-            ) +
-      labs(
-        title = "Diversity Scores by Body Sub-Site",
-        # caption = "",
-        y = paste0("Diversity (", alpha,")"),
-        x = "Body Sub-Site"
-      ) 
-}) 
+# Create an empty plot list
+plots <- list()
 
-names(ps.list[["RAR"]][["Plots"]]) <- names(methods.alpha)
+if(redo.analysis$redo.plots == T){
 
-ps.list[["RAR"]][["Plots"]]
+  plots[["AlphaDiversity"]][["Sex.bodySubSite"]]  <- lapply(names(methods.alpha), function(alpha){
+    tmp.data <- na.omit(as.data.frame(caseInfStats[["dataFort.ref"]][[alpha]]) )
+    ggplot(tmp.data, aes(x = HMPbodysubsite, y=Alpha.Score)) +
+        geom_boxplot(aes(fill = HMPbodysubsite)) + 
+        ggbeeswarm::geom_quasirandom(size = 0.75) +  # spaces the dots out nicely
+        facet_grid(. ~ .) +  # (Y-axis ~ X-axis)
+        theme(legend.position = "none",
+              axis.text.x = element_text(angle = 33, hjust = 1, vjust=1)
+              ) +
+        labs(
+          title = "Diversity Scores by Body Sub-Site",
+          # caption = "",
+          y = paste0("Diversity (", alpha,")"),
+          x = "Body Sub-Site"
+        ) 
+  }) 
+  
+  names(plots[["AlphaDiversity"]][["Sex.bodySubSite"]]  ) <- names(methods.alpha)
+  
+  
+  # Save
+  save(object = plots , file = paste0(saveObj.path, "/plots-alpha-sex-bodysubsite.RData"))
+
+} else {
+  
+  # Load
+  load(file = paste0(saveObj.path, "/plots-alpha-sex-bodysubsite.RData") )
+
+}
+
+plots
+
 
 ```
 
 
+```{r eval=FALSE, include=FALSE}
+save.image(paste0(saveObj.path, "/ST512_Project_", Sys.Date(), "ENV.RData"))
+```
 
