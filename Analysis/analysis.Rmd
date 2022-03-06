@@ -4,15 +4,15 @@ subtitle: "Body Sub-site Predicts Microbiome Diversity in Humans"
 author: "Connor Draney, Sunni Patton, Kelly Shannon, Michael Sieler"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
   html_document:
     toc: yes
     toc_depth: 3
     number_sections: yes
     theme: united
     highlight: tango
-  pdf_document:
-    toc: yes
-    toc_depth: '3'
 ---
 
 ```{r setup, include=FALSE}
@@ -70,6 +70,8 @@ output.path <- paste0(proj.path,  # Project path
 
 ```
 
+\newpage
+
 # Analysis Overview
 
 ## Research Question
@@ -102,7 +104,7 @@ We obtained 16S rRNA gene sequence data to investigate how the human microbiome 
 * Overall, our results suggest that the main effect of body sub-site and sex are statistically significant across all indics, except for in the Simposon's index sex is not statistically significant. Furthermore, the interaction of body sub-site and sex is statistically significant in all but Simpson's index. 
 
   
-  
+\newpage  
 
 # Import Data
 
@@ -130,6 +132,8 @@ if(redo.analysis$redo.importData == T){
 
 }
 ```
+
+
 
 ## Clean sample data
 
@@ -222,23 +226,6 @@ if(redo.analysis$redo.rarefy == T){
 ```
 
 
-
-
-# Plot pre- and post-rarefaction
-
-Check the number of reads before and after rarefaction.
-
-```{r pre-post-norm}
-
-hist(sample_sums(ps.cleaned), main="Histogram: Read Counts before rarefaction", xlab="Total Reads",
-     border="blue", col="green", las=1, breaks=12)
-hist(sample_sums(ps.cleaned), main="Histogram: Read Counts after rarefaction", xlab="Total Reads",
-     border="blue", col="green", las=1, breaks=12)
-
-```
-
-
-
 ```{r physeq-obj-list}
 # Make a list of phyloseq objects, dataframes and datatables
 ps.list <- list(RAR = list(ps.all = ps.rar,
@@ -320,6 +307,8 @@ caseInfStats[["mod.unref"]] <- lapply(methods.alpha, function(alpha){
 
 ```
 
+\newpage
+
 ## Check assumptions (unrefined model)
 
 To assess if the assumptions of linear model regression were met, we visually inspected residuals vs fitted values, standardized residuals vs quantiles, standardized residuals vs fitted values and residuals vs leverage for each diversity index. In general, Residuals vs fitted appears slightly heteroscedasticity, Q-Q plots show that the data slightly deviates from the diagonal line indicating that the data may be non-normal, Scale-location plots show that std. residuals are negatively associated with fitted values indicating heteroscedasticity, and there are several points with high leverage, but none that appear to have too high. The plots associated with the Simpson's index appear to be significantly heteroscedastic and non-normal.
@@ -335,6 +324,7 @@ check_assump_plots(data, index)
 
 ```
 
+\newpage
 
 ### Simpson
 
@@ -346,6 +336,8 @@ data <- caseInfStats[["mod.unref"]]
 index <- "Simpson"
 check_assump_plots(data, index)
 ```
+
+\newpage
 
 ### Phylogenetic
 
@@ -361,6 +353,8 @@ check_assump_plots(data, index)
 
 ```
 
+\newpage
+
 ### Richness
 
 
@@ -374,7 +368,7 @@ check_assump_plots(data, index)
 ```
 
 
-
+\newpage
 
 ## Remove unusual observations
 
@@ -496,7 +490,7 @@ names(caseInfStats[["ref.plot"]]) <- names(methods.alpha)
 
 ```
 
-
+\newpage
 
 ## Check assumptions (refined model)
 
@@ -512,6 +506,8 @@ check_assump_plots(data, index)
 
 ```
 
+\newpage
+
 ### Simpson
 
 ```{r fig.height=8, fig.width=8, message=FALSE, warning=FALSE}
@@ -522,6 +518,8 @@ check_assump_plots(data, index)
 
 ```
 
+\newpage
+
 ### Phylogenetic
 
 ```{r fig.height=8, fig.width=8, message=FALSE, warning=FALSE}
@@ -531,6 +529,8 @@ index <- "Phylogenetic"
 check_assump_plots(data, index)
 
 ```
+
+\newpage
 
 ### Richness
 
@@ -543,6 +543,8 @@ check_assump_plots(data, index)
 ```
 
 
+
+\newpage
 
 
 ## Plot unrefined and refined models
@@ -564,6 +566,8 @@ caseStatisticsPlots
 ```
 
 
+\newpage
+
 # Linear model results
 
 ## Shannon
@@ -578,6 +582,8 @@ caseInfStats[["mod.ref"]][[index]] %>% report_table()
 
 ```
 
+\newpage
+
 ## Simpson
 
 ```{r fig.height=4, fig.width=6, message=FALSE, warning=FALSE}
@@ -589,6 +595,8 @@ Anova(caseInfStats[["mod.ref"]][[index]], type = 2)
 caseInfStats[["mod.ref"]][[index]] %>% report_table()
 
 ```
+
+\newpage
 
 ## Phylogenetic
 
@@ -602,6 +610,8 @@ caseInfStats[["mod.ref"]][[index]] %>% report_table()
 
 
 ```
+
+\newpage
 
 ## Richness
 
@@ -619,6 +629,8 @@ caseInfStats[["mod.ref"]][[index]] %>% report_table()
 
 
 
+
+\newpage
 
 
 # Plots
