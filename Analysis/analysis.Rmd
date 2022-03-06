@@ -76,7 +76,7 @@ output.path <- paste0(proj.path,  # Project path
 
 ## Research Question
 
-Can we predict alpha diversity scores based on sex, body sub-site or the interaction of these two terms?
+Can we predict alpha diversity scores based on sex, body sub-site or the interaction of these terms?
 
 ## Hypothesis
 
@@ -102,6 +102,8 @@ We obtained 16S rRNA gene sequence data to investigate how the human microbiome 
 **Summary:**
 
 * Overall, our results suggest that the main effect of body sub-site and sex are statistically significant across all indics, except for in the Simposon's index sex is not statistically significant. Furthermore, the interaction of body sub-site and sex is statistically significant in all but Simpson's index. 
+
+Our data analysis and associated files can be found here: https://github.com/sielerjm/ST512_Project
 
   
 \newpage  
