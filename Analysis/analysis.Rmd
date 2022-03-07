@@ -22,10 +22,10 @@ knitr::opts_chunk$set(echo = TRUE)
 # load(paste0(saveObj.path, "/ST512_Project_2022-03-06_ENV.RData"))
 
 # Setting Redo analysis to FALSE allows you to knit the document without needing to run lengthy functions
-redo.analysis <- list(redo.importData = T,  # You'll need to set this to TRUE for your first time running
-                      redo.cleanData = T,  # You'll need to set this to TRUE for your first time running
-                      redo.rarefy = T,  # You'll need to set this to TRUE for your first time running
-                      redo.alphaDiv = F,
+redo.analysis <- list(redo.importData = F,  # You'll need to set this to TRUE for your first time running
+                      redo.cleanData = F,  # You'll need to set this to TRUE for your first time running
+                      redo.rarefy = F,  # You'll need to set this to TRUE for your first time running
+                      redo.alphaDiv = F, # You'll need to set this to TRUE for your first time running
                       redo.plots = F)
 
 
