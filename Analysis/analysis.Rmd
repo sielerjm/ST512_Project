@@ -22,9 +22,9 @@ knitr::opts_chunk$set(echo = TRUE)
 # load(paste0(saveObj.path, "/ST512_Project_2022-03-06_ENV.RData"))
 
 # Setting Redo analysis to FALSE allows you to knit the document without needing to run lengthy functions
-redo.analysis <- list(redo.importData = F,  # You'll need to set this to TRUE for your first time running
-                      redo.cleanData = F,  # You'll need to set this to TRUE for your first time running
-                      redo.rarefy = F,  # You'll need to set this to TRUE for your first time running
+redo.analysis <- list(redo.importData = T,  # You'll need to set this to TRUE for your first time running
+                      redo.cleanData = T,  # You'll need to set this to TRUE for your first time running
+                      redo.rarefy = T,  # You'll need to set this to TRUE for your first time running
                       redo.alphaDiv = F,
                       redo.plots = F)
 
@@ -84,7 +84,7 @@ The human body is comprised of multiple body sites with unique environmental con
 
 ## Statistical analysis
 
-All statistical analyses and visualizations were conducted in R (v 4.0.5) unless otherwise specified. Data was obtained from the Human Microbiome Project (https://www.hmpdacc.org/micro_analysis/microbiome_analyses.php). After removal of samples of a read depth of less than 1,000 the minimum read depth of 1,003, NAs were removed at the Phylum level and 292 ASVs were identified. Additionally, we filtered for samples that were processed at JCCI, not repeated samples from an individual, and not marked as misslabeled or contaminated. Alpha-diversity was calculated using estimate_richness function (Phyloseq v 1.38.0). Alpha-scores were calculated using Shannon, Simpson, Phylogenetic, and Richness indices. Using case influence statistics, we removed any unusual observations that fell beyond standard cutoff values for Cook's Distance, leverage and standardized residuals. These data were then analyzed using linear models (LMs) to build models in order to determine the best predictors of alpha-diversity. Two-way ANOVA was used to assess the models. 
+All statistical analyses and visualizations were conducted in R (v 4.0.5) unless otherwise specified. Data was obtained from the Human Microbiome Project (https://www.hmpdacc.org/micro_analysis/microbiome_analyses.php). After removal of samples of a read depth of less than 1,000 the minimum read depth of 1,003, NAs were removed at the Phylum level and 24,849 taxa (unique organisms) were identified. Additionally, we filtered for samples that were processed at JCCI, not repeated samples from an individual, and not marked as misslabeled or contaminated. Alpha-diversity was calculated using estimate_richness function (Phyloseq v 1.38.0). Alpha-scores were calculated using Shannon, Simpson, Phylogenetic, and Richness indices. Using case influence statistics, we removed any unusual observations that fell beyond standard cutoff values for Cook's Distance, leverage and standardized residuals. These data were then analyzed using linear models (LMs) to build models in order to determine the best predictors of alpha-diversity. Two-way ANOVA was used to assess the models. 
 
 ## Results
 
@@ -190,7 +190,8 @@ if(redo.analysis$redo.cleanData == T){
 
 # Rarefaction
 
-We rarefied the data to control for uneven sampling efforts  [Sanders, H. L. (1968)](https://www.journals.uchicago.edu/doi/abs/10.1086/282541), [Willis, A.D.  (2019)](https://www.frontiersin.org/articles/10.3389/fmicb.2019.02407/full#B13).
+We rarefied the data to control for uneven sampling efforts ([Sanders, H. L. (1968)](https://www.journals.uchicago.edu/doi/abs/10.1086/282541), [Willis, A.D.  (2019)](https://www.frontiersin.org/articles/10.3389/fmicb.2019.02407/full#B13)). After rarefaction, 47 samples were removed because they contained fewer reads than the minimum sample size of 1000, and 20497 taxa were removed because they are no longer present in any sample after random subsampling. The remaining number of taxa is 24,839 across 562 samples. 
+
 
 ```{r rarefaction, message=FALSE, warning=FALSE}
 
